@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package primes;
+
+option go_package = "cmsc_621_project_2/primes";
+
+// ─────────────────────────────────────────────
+// FileServer
+// ─────────────────────────────────────────────
+service FileServer {
+  rpc FetchSegment(ChunkRequest) returns (stream Chunk);
+}
+
+message ChunkRequest {
+  string filepath = 1;
+  int64 start = 2;
+  int64 length = 3;
+  int64 chunk_size = 4;
+}
+
+message Chunk {
+  bytes data = 1;
+}
+
+// ─────────────────────────────────────────────
+// Dispatcher
+// ─────────────────────────────────────────────
+service Dispatcher {
+  rpc PullJob(JobRequest) returns (JobResponse);
+}
+
+message JobRequest {
+  string worker_id = 1;
+}
+
+message JobResponse {
+  bool has_job = 1;
+  string job_id = 2;
+  string filepath = 3;
+  int64 start = 4;
+  int64 length = 5;
+}
+
+// ─────────────────────────────────────────────
+// Consolidator
+// ─────────────────────────────────────────────
+service Consolidator {
+  rpc PushResult(ResultRequest) returns (ResultResponse);
+}
+
+message ResultRequest {
+  string worker_id = 1;
+  string job_id = 2;
+  int64 prime_count = 3;
+}
+
+message ResultResponse {
+  bool accepted = 1;
+}

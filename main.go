@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	pb "your_module/primes" // TODO: replace with your actual module path
+	pb "cmsc_621_project_2/primes"
 
 	"google.golang.org/grpc"
 )
@@ -27,7 +27,7 @@ func parseArgs() (datafile string, M, N, C int, configPath string) {
 	flag.IntVar   (&C,          "C",      1024,             "chunk size in bytes")
 	flag.StringVar(&configPath, "config", "primes_config.txt", "path to config file")
 	flag.Parse()
-	
+
 	// Also support positional args like P1: <datafile> <M> <N> <C> <config>
 	if flag.NArg() >= 5 {
 		datafile   = flag.Arg(0)
@@ -128,7 +128,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Shared channels (same role as P1 channels, just now behind gRPC handlers)
+	// Shared channels (same implementation as in project 1, just now behind gRPC handlers)
 	jobQueue    := make(chan *pb.JobResponse, M*2)
 	resultQueue := make(chan *pb.ResultRequest, M*2)
 	done        := make(chan int64, 1)
