@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"math/big"
+	"math/rand"
 	"os"
 	"time"
 
@@ -86,8 +87,7 @@ func main() {
 	consClient := pb.NewConsolidatorClient(consConn)
 
 	// P1-style: sleep 400-600ms before first job pull
-	// TODO: add random sleep here (same as P1)
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(time.Duration(400+rand.Intn(201)) * time.Millisecond)
 
 	// ── Main work loop ──────────────────────────────────────────────
 	for {
@@ -143,6 +143,16 @@ func main() {
 		if err != nil {
 			slog.Error("PushResult failed", "err", err)
 		}
+	}
+
+	// Tell the consolidator we have finished processing and are shutting down
+	_, err = consClient.PushResult(context.Background(), &pb.ResultRequest{
+		WorkerId:   workerID,
+		JobId:      "DONE",
+		PrimeCount: 0,
+	})
+	if err != nil {
+		slog.Error("Failed to send DONE signal", "err", err)
 	}
 
 	slog.Info("worker done", "id", workerID)

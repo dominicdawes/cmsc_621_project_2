@@ -1,4 +1,4 @@
-#\ Project 2
+# Project 2
 
 Extend the GoLang project 1 by distributing the workers as independent processes (running on
 possible different machines) communicating with the dispatcher, consolidator, and a fileserver

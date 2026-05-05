@@ -48,12 +48,13 @@ type dispatcherServer struct {
 	jobQueue chan *pb.JobResponse // buffered; dispatcher goroutine fills it
 }
 
+// Dispatcher needs to traverse the file size, slice it into jobs of size N, and feed them into the jobQueue.
 func (s *dispatcherServer) PullJob(_ interface{}, req *pb.JobRequest) (*pb.JobResponse, error) {
-	// TODO: replace the two lines below with the real channel receive
-	// job, ok := <-s.jobQueue
-	// if !ok { return &pb.JobResponse{HasJob: false}, nil }
-	// return job, nil
-	panic("TODO: implement PullJob — receive from s.jobQueue")
+	job, ok := <-s.jobQueue
+	if !ok {
+		return &pb.JobResponse{HasJob: false}, nil
+	}
+	return job, nil
 }
 
 // fillJobs partitions the datafile into segments and pushes them onto jobQueue.
@@ -68,9 +69,25 @@ func fillJobs(datafile string, N int, jobQueue chan<- *pb.JobResponse) {
 	}
 	fileSize := info.Size()
 
-	// TODO: walk the file in N-byte segments, build JobResponse for each,
-	//       and send on jobQueue. Same logic as your P1 dispatcher goroutine.
-	_ = fileSize
+	var start int64 = 0
+	var jobID int = 0
+
+	for start < fileSize {
+		length := int64(N)
+		if start+length > fileSize {
+			length = fileSize - start
+		}
+
+		jobQueue <- &pb.JobResponse{
+			HasJob:   true,
+			JobId:    fmt.Sprintf("job-%d", jobID),
+			Filepath: datafile,
+			Start:    start,
+			Length:   length,
+		}
+		start += length
+		jobID++
+	}
 	slog.Info("dispatcher: all jobs enqueued")
 }
 
@@ -83,17 +100,30 @@ type consolidatorServer struct {
 	resultQueue chan *pb.ResultRequest
 }
 
+
+// Consolidator listens for results on the resultQueue until it has received a "DONE" signal from all M workers.
 func (s *consolidatorServer) PushResult(_ interface{}, req *pb.ResultRequest) (*pb.ResultResponse, error) {
-	// TODO: send req onto s.resultQueue; return accepted=true
-	panic("TODO: implement PushResult — send to s.resultQueue")
+	s.resultQueue <- req
+	return &pb.ResultResponse{Accepted: true}, nil
 }
 
 // consolidate drains resultQueue and sums up prime counts.
 // Signal done when all M workers have finished.
 func consolidate(resultQueue <-chan *pb.ResultRequest, M int, done chan<- int64) {
-	// TODO: accumulate prime counts until you've received M "worker done" signals
-	//       (or track some other termination condition), then send total on done.
-	panic("TODO: implement consolidate")
+	var totalPrimes int64
+	var workersDone int
+
+	for req := range resultQueue {
+		if req.JobId == "DONE" {
+			workersDone++
+			if workersDone == M {
+				break
+			}
+			continue
+		}
+		totalPrimes += req.PrimeCount
+	}
+	done <- totalPrimes
 }
 
 // ─────────────────────────────────────────────
